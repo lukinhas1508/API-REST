@@ -7,7 +7,11 @@ import com.lucas.taskapi.dto.TaskStatusRequest;
 import com.lucas.taskapi.entity.TaskPriority;
 import com.lucas.taskapi.entity.TaskStatus;
 import com.lucas.taskapi.service.TaskService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
@@ -26,6 +30,7 @@ import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import java.net.URI;
 
+@Tag(name = "Tarefas", description = "Gerenciamento de tarefas")
 @RestController
 @RequestMapping("/tasks")
 public class TaskController {
@@ -36,19 +41,27 @@ public class TaskController {
         this.taskService = taskService;
     }
 
+    @Operation(summary = "Lista tarefas com paginação e filtros opcionais")
     @GetMapping
     public ResponseEntity<PageResponse<TaskResponse>> findAll(
             @RequestParam(required = false) TaskStatus status,
             @RequestParam(required = false) TaskPriority priority,
+            @ParameterObject
             @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
         return ResponseEntity.ok(taskService.findAll(status, priority, pageable));
     }
 
+    @Operation(summary = "Busca uma tarefa pelo id")
+    @ApiResponse(responseCode = "200", description = "Tarefa encontrada")
+    @ApiResponse(responseCode = "404", description = "Tarefa não encontrada")
     @GetMapping("/{id}")
     public ResponseEntity<TaskResponse> findById(@PathVariable Long id) {
         return ResponseEntity.ok(taskService.findById(id));
     }
 
+    @Operation(summary = "Cria uma nova tarefa")
+    @ApiResponse(responseCode = "201", description = "Tarefa criada")
+    @ApiResponse(responseCode = "400", description = "Dados inválidos")
     @PostMapping
     public ResponseEntity<TaskResponse> create(@RequestBody @Valid TaskRequest request) {
         TaskResponse created = taskService.create(request);
@@ -59,16 +72,26 @@ public class TaskController {
         return ResponseEntity.created(location).body(created);
     }
 
+    @Operation(summary = "Atualiza os dados de uma tarefa")
+    @ApiResponse(responseCode = "200", description = "Tarefa atualizada")
+    @ApiResponse(responseCode = "404", description = "Tarefa não encontrada")
+    @ApiResponse(responseCode = "422", description = "Tarefa concluída não pode ser editada")
     @PutMapping("/{id}")
     public ResponseEntity<TaskResponse> update(@PathVariable Long id, @RequestBody @Valid TaskRequest request) {
         return ResponseEntity.ok(taskService.update(id, request));
     }
 
+    @Operation(summary = "Altera o status de uma tarefa")
+    @ApiResponse(responseCode = "200", description = "Status alterado")
+    @ApiResponse(responseCode = "404", description = "Tarefa não encontrada")
     @PatchMapping("/{id}/status")
     public ResponseEntity<TaskResponse> updateStatus(@PathVariable Long id, @RequestBody @Valid TaskStatusRequest request) {
         return ResponseEntity.ok(taskService.updateStatus(id, request));
     }
 
+    @Operation(summary = "Remove uma tarefa")
+    @ApiResponse(responseCode = "204", description = "Tarefa removida")
+    @ApiResponse(responseCode = "404", description = "Tarefa não encontrada")
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         taskService.delete(id);
