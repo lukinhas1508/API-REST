@@ -16,3 +16,9 @@ spring:
     web:
       pageable:
         max-page-size: 50
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
