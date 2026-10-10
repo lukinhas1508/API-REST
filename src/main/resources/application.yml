@@ -2,6 +2,10 @@ spring:
   application:
     name: task-api
 
+  # carrega as variáveis do arquivo .env (que não vai para o Git), se ele existir
+  config:
+    import: optional:file:.env[.properties]
+
   datasource:
     url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:taskdb}
     username: ${DB_USER}

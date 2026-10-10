@@ -1,3 +1,5 @@
+# As credenciais vêm do arquivo .env (veja .env.example).
+# O ":?" faz o compose parar com erro se a variável não estiver definida.
 services:
   db:
     image: postgres:17-alpine
@@ -29,6 +31,7 @@ services:
       DB_USER: ${DB_USER:?defina DB_USER no arquivo .env}
       DB_PASSWORD: ${DB_PASSWORD:?defina DB_PASSWORD no arquivo .env}
       JWT_SECRET: ${JWT_SECRET:?defina JWT_SECRET no arquivo .env}
+      JWT_EXPIRATION: ${JWT_EXPIRATION:-1h}
     ports:
       - "8080:8080"
 
