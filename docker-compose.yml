@@ -16,5 +16,20 @@ services:
       timeout: 5s
       retries: 5
 
+  api:
+    build: .
+    container_name: task-api
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_NAME: ${DB_NAME:-taskdb}
+      DB_USER: ${DB_USER:?defina DB_USER no arquivo .env}
+      DB_PASSWORD: ${DB_PASSWORD:?defina DB_PASSWORD no arquivo .env}
+    ports:
+      - "8080:8080"
+
 volumes:
   postgres_data:
