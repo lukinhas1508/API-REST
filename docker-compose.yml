@@ -28,6 +28,7 @@ services:
       DB_NAME: ${DB_NAME:-taskdb}
       DB_USER: ${DB_USER:?defina DB_USER no arquivo .env}
       DB_PASSWORD: ${DB_PASSWORD:?defina DB_PASSWORD no arquivo .env}
+      JWT_SECRET: ${JWT_SECRET:?defina JWT_SECRET no arquivo .env}
     ports:
       - "8080:8080"
 

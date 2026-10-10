@@ -17,6 +17,12 @@ spring:
       pageable:
         max-page-size: 50
 
+security:
+  jwt:
+    secret: ${JWT_SECRET}
+    issuer: task-api
+    expiration: ${JWT_EXPIRATION:1h}
+
 management:
   endpoints:
     web:
