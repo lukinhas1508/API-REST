@@ -1,19 +1,22 @@
 package com.lucas.taskapi.service;
 
+import com.lucas.taskapi.dto.PageResponse;
 import com.lucas.taskapi.dto.TaskRequest;
 import com.lucas.taskapi.dto.TaskResponse;
 import com.lucas.taskapi.dto.TaskStatusRequest;
 import com.lucas.taskapi.entity.Task;
+import com.lucas.taskapi.entity.TaskPriority;
+import com.lucas.taskapi.entity.TaskStatus;
 import com.lucas.taskapi.exception.BusinessException;
 import com.lucas.taskapi.exception.ResourceNotFoundException;
 import com.lucas.taskapi.mapper.TaskMapper;
 import com.lucas.taskapi.repository.TaskRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.util.List;
 
 @Service
 public class TaskService {
@@ -29,11 +32,10 @@ public class TaskService {
     }
 
     @Transactional(readOnly = true)
-    public List<TaskResponse> findAll() {
-        return taskRepository.findAll()
-                .stream()
-                .map(taskMapper::toResponse)
-                .toList();
+    public PageResponse<TaskResponse> findAll(TaskStatus status, TaskPriority priority, Pageable pageable) {
+        Page<TaskResponse> page = taskRepository.search(status, priority, pageable)
+                .map(taskMapper::toResponse);
+        return PageResponse.from(page);
     }
 
     @Transactional(readOnly = true)
