@@ -9,14 +9,20 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.util.Optional;
+
 public interface TaskRepository extends JpaRepository<Task, Long> {
+
+    Optional<Task> findByIdAndOwnerId(Long id, Long ownerId);
 
     @Query("""
             SELECT t FROM Task t
-            WHERE (:status IS NULL OR t.status = :status)
+            WHERE t.owner.id = :ownerId
+              AND (:status IS NULL OR t.status = :status)
               AND (:priority IS NULL OR t.priority = :priority)
             """)
-    Page<Task> search(@Param("status") TaskStatus status,
+    Page<Task> search(@Param("ownerId") Long ownerId,
+                      @Param("status") TaskStatus status,
                       @Param("priority") TaskPriority priority,
                       Pageable pageable);
 }
