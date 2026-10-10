@@ -3,6 +3,7 @@ package com.lucas.taskapi.controller;
 import com.lucas.taskapi.dto.TaskRequest;
 import com.lucas.taskapi.dto.TaskResponse;
 import com.lucas.taskapi.service.TaskService;
+import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -38,7 +39,7 @@ public class TaskController {
     }
 
     @PostMapping
-    public ResponseEntity<TaskResponse> create(@RequestBody TaskRequest request) {
+    public ResponseEntity<TaskResponse> create(@RequestBody @Valid TaskRequest request) {
         TaskResponse created = taskService.create(request);
         URI location = ServletUriComponentsBuilder.fromCurrentRequest()
                 .path("/{id}")
@@ -48,7 +49,7 @@ public class TaskController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<TaskResponse> update(@PathVariable Long id, @RequestBody TaskRequest request) {
+    public ResponseEntity<TaskResponse> update(@PathVariable Long id, @RequestBody @Valid TaskRequest request) {
         return ResponseEntity.ok(taskService.update(id, request));
     }
 
