@@ -6,10 +6,12 @@ import com.lucas.taskapi.dto.TaskStatusRequest;
 import com.lucas.taskapi.entity.Task;
 import com.lucas.taskapi.entity.TaskPriority;
 import com.lucas.taskapi.entity.TaskStatus;
+import com.lucas.taskapi.entity.User;
 import com.lucas.taskapi.exception.BusinessException;
 import com.lucas.taskapi.exception.ResourceNotFoundException;
 import com.lucas.taskapi.mapper.TaskMapper;
 import com.lucas.taskapi.repository.TaskRepository;
+import com.lucas.taskapi.repository.UserRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -35,8 +37,14 @@ import static org.mockito.Mockito.when;
 @ExtendWith(MockitoExtension.class)
 class TaskServiceTest {
 
+    private static final Long USER_ID = 1L;
+    private static final Long TASK_ID = 10L;
+
     @Mock
     private TaskRepository taskRepository;
+
+    @Mock
+    private UserRepository userRepository;
 
     @Spy
     private TaskMapper taskMapper = new TaskMapper();
@@ -44,8 +52,10 @@ class TaskServiceTest {
     @InjectMocks
     private TaskService taskService;
 
+    private final User owner = new User("Lucas", "lucas@email.com", "senha-criptografada");
+
     private Task newTask() {
-        return new Task("Estudar Spring", "Ler a documentação", TaskPriority.HIGH, null);
+        return new Task("Estudar Spring", "Ler a documentação", TaskPriority.HIGH, null, owner);
     }
 
     @Nested
@@ -53,11 +63,12 @@ class TaskServiceTest {
     class Create {
 
         @Test
-        @DisplayName("deve criar tarefa com status PENDING")
+        @DisplayName("deve criar tarefa com status PENDING vinculada ao usuário")
         void shouldCreateWithPendingStatus() {
+            when(userRepository.getReferenceById(USER_ID)).thenReturn(owner);
             when(taskRepository.save(any(Task.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-            TaskResponse response = taskService.create(
+            TaskResponse response = taskService.create(USER_ID,
                     new TaskRequest("Estudar Spring", "Ler a documentação", TaskPriority.HIGH, null));
 
             assertThat(response.title()).isEqualTo("Estudar Spring");
@@ -68,9 +79,10 @@ class TaskServiceTest {
         @Test
         @DisplayName("deve usar prioridade MEDIUM quando não informada")
         void shouldUseMediumPriorityByDefault() {
+            when(userRepository.getReferenceById(USER_ID)).thenReturn(owner);
             when(taskRepository.save(any(Task.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-            TaskResponse response = taskService.create(new TaskRequest("Estudar Spring", null, null, null));
+            TaskResponse response = taskService.create(USER_ID, new TaskRequest("Estudar Spring", null, null, null));
 
             assertThat(response.priority()).isEqualTo(TaskPriority.MEDIUM);
         }
@@ -81,21 +93,21 @@ class TaskServiceTest {
     class FindById {
 
         @Test
-        @DisplayName("deve retornar a tarefa quando o id existir")
+        @DisplayName("deve retornar a tarefa do usuário")
         void shouldReturnTask() {
-            when(taskRepository.findById(1L)).thenReturn(Optional.of(newTask()));
+            when(taskRepository.findByIdAndOwnerId(TASK_ID, USER_ID)).thenReturn(Optional.of(newTask()));
 
-            TaskResponse response = taskService.findById(1L);
+            TaskResponse response = taskService.findById(USER_ID, TASK_ID);
 
             assertThat(response.title()).isEqualTo("Estudar Spring");
         }
 
         @Test
-        @DisplayName("deve lançar ResourceNotFoundException quando o id não existir")
+        @DisplayName("deve lançar ResourceNotFoundException quando a tarefa não existir ou for de outro usuário")
         void shouldThrowWhenNotFound() {
-            when(taskRepository.findById(99L)).thenReturn(Optional.empty());
+            when(taskRepository.findByIdAndOwnerId(99L, USER_ID)).thenReturn(Optional.empty());
 
-            assertThatThrownBy(() -> taskService.findById(99L))
+            assertThatThrownBy(() -> taskService.findById(USER_ID, 99L))
                     .isInstanceOf(ResourceNotFoundException.class)
                     .hasMessageContaining("99");
         }
@@ -106,17 +118,17 @@ class TaskServiceTest {
     class FindAll {
 
         @Test
-        @DisplayName("deve repassar os filtros para o repository")
+        @DisplayName("deve buscar apenas tarefas do usuário com os filtros informados")
         void shouldPassFiltersToRepository() {
             Pageable pageable = PageRequest.of(0, 10);
-            when(taskRepository.search(TaskStatus.PENDING, TaskPriority.HIGH, pageable))
+            when(taskRepository.search(USER_ID, TaskStatus.PENDING, TaskPriority.HIGH, pageable))
                     .thenReturn(new PageImpl<>(List.of(newTask()), pageable, 1));
 
-            var response = taskService.findAll(TaskStatus.PENDING, TaskPriority.HIGH, pageable);
+            var response = taskService.findAll(USER_ID, TaskStatus.PENDING, TaskPriority.HIGH, pageable);
 
             assertThat(response.content()).hasSize(1);
             assertThat(response.totalElements()).isEqualTo(1);
-            verify(taskRepository).search(TaskStatus.PENDING, TaskPriority.HIGH, pageable);
+            verify(taskRepository).search(USER_ID, TaskStatus.PENDING, TaskPriority.HIGH, pageable);
         }
     }
 
@@ -127,10 +139,10 @@ class TaskServiceTest {
         @Test
         @DisplayName("deve atualizar os dados da tarefa")
         void shouldUpdateTask() {
-            when(taskRepository.findById(1L)).thenReturn(Optional.of(newTask()));
+            when(taskRepository.findByIdAndOwnerId(TASK_ID, USER_ID)).thenReturn(Optional.of(newTask()));
             when(taskRepository.saveAndFlush(any(Task.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-            TaskResponse response = taskService.update(1L,
+            TaskResponse response = taskService.update(USER_ID, TASK_ID,
                     new TaskRequest("Novo título", "Nova descrição", TaskPriority.LOW, null));
 
             assertThat(response.title()).isEqualTo("Novo título");
@@ -143,9 +155,9 @@ class TaskServiceTest {
         void shouldNotUpdateDoneTask() {
             Task task = newTask();
             task.changeStatus(TaskStatus.DONE);
-            when(taskRepository.findById(1L)).thenReturn(Optional.of(task));
+            when(taskRepository.findByIdAndOwnerId(TASK_ID, USER_ID)).thenReturn(Optional.of(task));
 
-            assertThatThrownBy(() -> taskService.update(1L,
+            assertThatThrownBy(() -> taskService.update(USER_ID, TASK_ID,
                     new TaskRequest("Novo título", null, null, null)))
                     .isInstanceOf(BusinessException.class);
 
@@ -160,10 +172,10 @@ class TaskServiceTest {
         @Test
         @DisplayName("deve preencher completedAt ao concluir a tarefa")
         void shouldSetCompletedAtWhenDone() {
-            when(taskRepository.findById(1L)).thenReturn(Optional.of(newTask()));
+            when(taskRepository.findByIdAndOwnerId(TASK_ID, USER_ID)).thenReturn(Optional.of(newTask()));
             when(taskRepository.saveAndFlush(any(Task.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-            TaskResponse response = taskService.updateStatus(1L, new TaskStatusRequest(TaskStatus.DONE));
+            TaskResponse response = taskService.updateStatus(USER_ID, TASK_ID, new TaskStatusRequest(TaskStatus.DONE));
 
             assertThat(response.status()).isEqualTo(TaskStatus.DONE);
             assertThat(response.completedAt()).isNotNull();
@@ -174,10 +186,11 @@ class TaskServiceTest {
         void shouldClearCompletedAtWhenReopened() {
             Task task = newTask();
             task.changeStatus(TaskStatus.DONE);
-            when(taskRepository.findById(1L)).thenReturn(Optional.of(task));
+            when(taskRepository.findByIdAndOwnerId(TASK_ID, USER_ID)).thenReturn(Optional.of(task));
             when(taskRepository.saveAndFlush(any(Task.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-            TaskResponse response = taskService.updateStatus(1L, new TaskStatusRequest(TaskStatus.IN_PROGRESS));
+            TaskResponse response = taskService.updateStatus(USER_ID, TASK_ID,
+                    new TaskStatusRequest(TaskStatus.IN_PROGRESS));
 
             assertThat(response.status()).isEqualTo(TaskStatus.IN_PROGRESS);
             assertThat(response.completedAt()).isNull();
@@ -189,12 +202,12 @@ class TaskServiceTest {
     class Delete {
 
         @Test
-        @DisplayName("deve remover tarefa existente")
+        @DisplayName("deve remover tarefa do usuário")
         void shouldDeleteTask() {
             Task task = newTask();
-            when(taskRepository.findById(1L)).thenReturn(Optional.of(task));
+            when(taskRepository.findByIdAndOwnerId(TASK_ID, USER_ID)).thenReturn(Optional.of(task));
 
-            taskService.delete(1L);
+            taskService.delete(USER_ID, TASK_ID);
 
             verify(taskRepository).delete(task);
         }
@@ -202,9 +215,9 @@ class TaskServiceTest {
         @Test
         @DisplayName("não deve remover quando a tarefa não existir")
         void shouldNotDeleteWhenNotFound() {
-            when(taskRepository.findById(99L)).thenReturn(Optional.empty());
+            when(taskRepository.findByIdAndOwnerId(99L, USER_ID)).thenReturn(Optional.empty());
 
-            assertThatThrownBy(() -> taskService.delete(99L))
+            assertThatThrownBy(() -> taskService.delete(USER_ID, 99L))
                     .isInstanceOf(ResourceNotFoundException.class);
 
             verify(taskRepository, never()).delete(any(Task.class));

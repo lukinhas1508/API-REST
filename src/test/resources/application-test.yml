@@ -1,0 +1,10 @@
+# Valores usados apenas nos testes automatizados. Não são credenciais reais:
+# o banco de teste é criado pelo Testcontainers e descartado ao final.
+spring:
+  datasource:
+    username: test
+    password: test
+
+security:
+  jwt:
+    secret: segredo-usado-apenas-nos-testes-automatizados-0123456789
