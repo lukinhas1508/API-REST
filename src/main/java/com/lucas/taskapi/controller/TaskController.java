@@ -2,11 +2,13 @@ package com.lucas.taskapi.controller;
 
 import com.lucas.taskapi.dto.TaskRequest;
 import com.lucas.taskapi.dto.TaskResponse;
+import com.lucas.taskapi.dto.TaskStatusRequest;
 import com.lucas.taskapi.service.TaskService;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -51,6 +53,11 @@ public class TaskController {
     @PutMapping("/{id}")
     public ResponseEntity<TaskResponse> update(@PathVariable Long id, @RequestBody @Valid TaskRequest request) {
         return ResponseEntity.ok(taskService.update(id, request));
+    }
+
+    @PatchMapping("/{id}/status")
+    public ResponseEntity<TaskResponse> updateStatus(@PathVariable Long id, @RequestBody @Valid TaskStatusRequest request) {
+        return ResponseEntity.ok(taskService.updateStatus(id, request));
     }
 
     @DeleteMapping("/{id}")

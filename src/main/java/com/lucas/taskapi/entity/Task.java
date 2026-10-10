@@ -67,6 +67,18 @@ public class Task {
         this.dueDate = dueDate;
     }
 
+    public void changeStatus(TaskStatus newStatus) {
+        if (this.status == newStatus) {
+            return;
+        }
+        this.status = newStatus;
+        this.completedAt = (newStatus == TaskStatus.DONE) ? LocalDateTime.now() : null;
+    }
+
+    public boolean isDone() {
+        return this.status == TaskStatus.DONE;
+    }
+
     @PrePersist
     void onCreate() {
         LocalDateTime now = LocalDateTime.now();

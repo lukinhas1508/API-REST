@@ -2,7 +2,9 @@ package com.lucas.taskapi.service;
 
 import com.lucas.taskapi.dto.TaskRequest;
 import com.lucas.taskapi.dto.TaskResponse;
+import com.lucas.taskapi.dto.TaskStatusRequest;
 import com.lucas.taskapi.entity.Task;
+import com.lucas.taskapi.exception.BusinessException;
 import com.lucas.taskapi.exception.ResourceNotFoundException;
 import com.lucas.taskapi.mapper.TaskMapper;
 import com.lucas.taskapi.repository.TaskRepository;
@@ -49,8 +51,21 @@ public class TaskService {
     @Transactional
     public TaskResponse update(Long id, TaskRequest request) {
         Task task = getTaskOrThrow(id);
+
+        if (task.isDone()) {
+            throw new BusinessException("Não é possível editar uma tarefa concluída. Reabra a tarefa antes de editar.");
+        }
+
         taskMapper.updateEntity(task, request);
         // flush para o @PreUpdate rodar e o updatedAt voltar atualizado na resposta
+        return taskMapper.toResponse(taskRepository.saveAndFlush(task));
+    }
+
+    @Transactional
+    public TaskResponse updateStatus(Long id, TaskStatusRequest request) {
+        Task task = getTaskOrThrow(id);
+        task.changeStatus(request.status());
+        log.info("Status da tarefa {} alterado para {}", id, request.status());
         return taskMapper.toResponse(taskRepository.saveAndFlush(task));
     }
 
